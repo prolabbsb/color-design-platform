@@ -1,0 +1,309 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- TODOS OS ENUMS (NO TOPO E FORMATADOS CORRETAMENTE) ---
+enum Role {
+  ARCHITECT
+  ADMIN
+}
+enum AccountStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  INACTIVE
+}
+enum ArchitectOfficeRole {
+  MANAGER
+  COLLABORATOR
+}
+enum IndicationStatus {
+  PENDING
+  IN_PROGRESS
+  CONCLUDED
+  CANCELED
+}
+enum CommissionStatus {
+  PENDING
+  PAID
+}
+enum QuoteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REVISED
+}
+enum DocumentType {
+  CONTRACT
+  INVOICE
+  RECEIPT
+  QUOTE_PDF
+  OTHER
+}
+enum ContactType {
+  EMAIL_MAIN
+  EMAIL_SECONDARY
+  PHONE_MAIN
+  PHONE_WHATSAPP
+  INSTAGRAM
+  OTHER
+}
+
+// --- NOVOS ENUMS PARA A POLÍTICA DE FICHEIROS ---
+enum FileStatus {
+  PENDING_VALIDATION
+  ACTIVE
+  REJECTED
+  ARCHIVED
+}
+enum UsageRights {
+  INTERNAL_USE_ONLY
+  PORTFOLIO
+  MARKETING
+}
+
+// --- MODELOS DE CATÁLOGO ---
+model ProductCatalog {
+  id          String  @id @default(cuid())
+  name        String  @unique 
+  description String?
+  sku         String? @unique
+  basePrice   Decimal?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  defaultPieces CatalogPiece[]
+  defaultImages CatalogImage[]
+  defaultAssets CatalogAsset[]
+  projectInstances Product[] 
+  @@map("cd_product_catalog")
+}
+model CatalogPiece {
+  id       String @id @default(cuid())
+  name     String @default("Peça")
+  quantity Int    @default(1)
+  height   Decimal
+  width    Decimal
+  depth    Decimal
+  catalogItem   ProductCatalog @relation(fields: [catalogItemId], references: [id])
+  catalogItemId String
+  @@map("cd_catalog_pieces")
+}
+model CatalogImage {
+  id      String @id @default(cuid())
+  url     String
+  altText String?
+  catalogItem   ProductCatalog @relation(fields: [catalogItemId], references: [id])
+  catalogItemId String
+  @@map("cd_catalog_images")
+}
+model CatalogAsset {
+  id   String @id @default(cuid())
+  name String 
+  url  String 
+  catalogItem   ProductCatalog @relation(fields: [catalogItemId], references: [id])
+  catalogItemId String
+  @@map("cd_catalog_assets")
+}
+
+// --- MODELOS DE USUÁRIOS E ESCRITÓRIOS ---
+model Office {
+  id    String @id @default(cuid())
+  name  String
+  cnpj  String? @unique
+  street  String?
+  city    String?
+  state   String?
+  zipCode String?
+  architects User[]
+  contacts   ContactMethod[]
+  @@map("cd_offices")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  password     String
+  referralCode String   @unique @default(cuid())
+  role         Role     @default(ARCHITECT) 
+  cau          String?  @unique
+  status       AccountStatus @default(PENDING_APPROVAL) 
+  architectRole ArchitectOfficeRole? 
+  ipAddress        String?
+  agreedToTermsAt  DateTime?
+  office       Office?  @relation(fields: [officeId], references: [id])
+  officeId     String?
+  indications  Indication[]
+  documents    Document[] @relation("UserDocuments")
+  uploadedFiles Document[] @relation("UploadedBy")
+  uploadedAssets ProjectAsset[]
+  uploadedImages ProjectImage[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@map("cd_users")
+}
+
+// --- MODELOS DE PROJETO (INDICATION) ---
+model Indication {
+  id           String   @id @default(cuid())
+  status       IndicationStatus @default(PENDING) 
+  projectValue Decimal?
+  requestedCommissionPercentage Decimal? 
+  architect    User     @relation(fields: [architectId], references: [id])
+  architectId  String
+  client       Client   @relation(fields: [clientId], references: [id])
+  clientId     String
+  commission   Commission?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  products     Product[]
+  quotes       Quote[]   
+  @@map("cd_indications")
+}
+
+model Product {
+  id   String @id @default(cuid())
+  name String  
+  notes String? 
+  indication   Indication @relation(fields: [indicationId], references: [id])
+  indicationId String
+  catalogItem   ProductCatalog? @relation(fields: [catalogItemId], references: [id])
+  catalogItemId String?
+  pieces ProjectPiece[]
+  images ProjectImage[]
+  assets ProjectAsset[]
+  @@map("cd_products")
+}
+
+model ProjectPiece {
+  id       String @id @default(cuid())
+  name     String @default("Peça")
+  quantity Int    @default(1)
+  height   Decimal
+  width    Decimal
+  depth    Decimal
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  @@map("cd_project_pieces")
+}
+
+// --- MODELOS DE FICHEIROS ATUALIZADOS (COM CAMPOS OPCIONAIS) ---
+
+model ProjectImage {
+  id      String @id @default(cuid())
+  url     String
+  altText String?
+  
+  // --- METADADOS DA POLÍTICA (TORNADOS OPCIONAIS) ---
+  status      FileStatus?  @default(PENDING_VALIDATION)
+  usageRights UsageRights? @default(INTERNAL_USE_ONLY)
+  
+  uploadedBy  User?        @relation(fields: [uploadedById], references: [id])
+  uploadedById String?
+  
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  @@map("cd_project_images")
+}
+
+model ProjectAsset {
+  id   String @id @default(cuid())
+  name String 
+  url  String 
+  
+  // --- METADADOS DA POLÍTICA (TORNADOS OPCIONAIS) ---
+  status      FileStatus?  @default(PENDING_VALIDATION)
+  usageRights UsageRights? @default(INTERNAL_USE_ONLY)
+  
+  uploadedBy  User?        @relation(fields: [uploadedById], references: [id])
+  uploadedById String? // <-- Esta era a coluna que estava a causar o erro
+  
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  @@map("cd_project_assets")
+}
+
+model Document {
+  id     String       @id @default(cuid())
+  name   String
+  type   DocumentType 
+  url    String
+  
+  // --- METADADOS DA POLÍTICA (TORNADOS OPCIONAIS) ---
+  status      FileStatus?  @default(PENDING_VALIDATION)
+  usageRights UsageRights? @default(INTERNAL_USE_ONLY)
+  
+  uploadedBy  User?        @relation("UploadedBy", fields: [uploadedById], references: [id])
+  uploadedById String?
+  
+  user   User   @relation("UserDocuments", fields: [userId], references: [id])
+  userId String
+  
+  createdAt DateTime @default(now())
+  @@unique([userId, type])
+  @@map("cd_documents")
+}
+
+// --- MODELOS DE CLIENTE E ORÇAMENTO (sem alteração) ---
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  document  String?  @unique
+  contacts  ContactMethod[]
+  addresses Address[]
+  indications Indication[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("cd_clients")
+}
+model Address {
+  id        String @id @default(cuid())
+  street    String
+  city      String
+  state     String
+  zipCode   String
+  country   String @default("Brasil")
+  client    Client @relation(fields: [clientId], references: [id])
+  clientId  String
+  @@map("cd_addresses")
+}
+model Commission {
+  id           String   @id @default(cuid())
+  amount       Decimal
+  status       CommissionStatus @default(PENDING)
+  indication   Indication @relation(fields: [indicationId], references: [id])
+  indicationId String     @unique
+  createdAt    DateTime @default(now())
+  paidAt       DateTime?
+  @@map("cd_commissions")
+}
+model Quote {
+  id         String      @id @default(cuid())
+  amount     Decimal
+  status     QuoteStatus @default(PENDING)
+  notes      String?
+  validUntil DateTime?
+  deliveryTimeframe String?
+  paymentConditions String?
+  indication   Indication @relation(fields: [indicationId], references: [id])
+  indicationId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@map("cd_quotes")
+}
+model ContactMethod {
+  id     String      @id @default(cuid())
+  type   ContactType 
+  value  String
+  notes  String?
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+  officeId String?
+  office   Office? @relation(fields: [officeId], references: [id])
+  @@map("cd_contact_methods")
+}

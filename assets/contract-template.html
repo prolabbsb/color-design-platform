@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Contrato de Parceria</title>
+    <style>
+        /* Insira aqui o CSS para estilizar o seu PDF (ex: fontes, cores) */
+        /* Recomendamos usar as fontes Oswald e Montserrat */
+        body { font-family: 'Montserrat', sans-serif; font-size: 11pt; }
+        h1 { font-family: 'Oswald', sans-serif; color: #C930A5; } /* Rosa Pink */
+        .clausula { margin-bottom: 15px; }
+        .identificacao { background-color: #f4f4f4; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>CONTRATO DE ADESÃO AO PROGRAMA DE PARCERIA – COLOR DESIGN BRASIL</h1>
+
+    <div class="identificacao">
+        <p><strong>FRANQUEADORA/CONTRATANTE:</strong> COLOR DESIGN BRASIL...</p>
+        <p><strong>PARCEIRO/ARQUITETO ADERENTE:</strong></p>
+        <p><strong>Nome completo:</strong> {{NOME_PROFISSIONAL}}</p>
+        <p><strong>CPF/CNPJ:</strong> {{CPF_CNPJ}}</p>
+        <p><strong>Endereço:</strong> {{ENDERECO}}</p>
+        <p><strong>E-mail:</strong> {{EMAIL_CONTATO}}</p>
+    </div>
+
+    <div class="clausula">
+        <p><strong>CLÁUSULA 1 - OBJETO...</strong></p>
+        </div>
+    
+    <div class="aceite-digital">
+        <p>E, por estarem de pleno acordo, as partes aceitam eletronicamente este Contrato...</p>
+        <p>Assinado digitalmente (IP: {{IP_ADDRESS}}) em {{DATA_ACEITE}}.</p>
+    </div>
+</body>
+</html>
